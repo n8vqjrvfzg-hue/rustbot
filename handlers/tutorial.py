@@ -2,11 +2,9 @@
 from aiogram import F, Router
 from aiogram.types import CallbackQuery
 
-import roles
 import ui
 from database import db
-from keyboards.extras import tut_quiz_kb, tut_step_kb
-from keyboards.main import main_menu
+from keyboards.extras import rules_ok_kb, tut_quiz_kb, tut_step_kb
 from utils import safe_edit
 
 router = Router()
@@ -17,6 +15,8 @@ async def _onboarding_user(cb: CallbackQuery):
     if not user or user["status"] != "onboarding":
         if user and user["status"] == "accepted":
             await cb.answer("Обучение уже пройдено ✅")
+        elif user and user["status"] == "rules":
+            await cb.answer("Обучение пройдено ✅ Осталось прочитать правила: нажми /start.", show_alert=True)
         else:
             await cb.answer("Обучение доступно после одобрения анкеты.", show_alert=True)
         return None
@@ -63,6 +63,7 @@ async def tutorial_answer(cb: CallbackQuery):
                         tut_quiz_kb(q + 1, ui.TUTORIAL_QUIZ[q + 1]["options"]))
         return await cb.answer("✅ Верно!")
 
-    await db.set_user_status(user["tg_id"], "accepted")
-    await safe_edit(cb.message, ui.tutorial_done_text(), main_menu(roles.level(user["role"])))
+    # последний шаг перед полным доступом: правила сообщества
+    await db.set_user_status(user["tg_id"], "rules")
+    await safe_edit(cb.message, ui.rules_screen(await db.get_rules_custom(), first_time=True), rules_ok_kb())
     await cb.answer("🎓 Обучение пройдено!")

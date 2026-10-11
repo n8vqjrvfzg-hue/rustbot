@@ -4,7 +4,7 @@ from aiogram.methods import SendMessage
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 # Если в клавиатуре уже есть выход в меню (или это само меню), кнопку не добавляем
-SKIP_CALLBACKS = {"menu", "home", "profile", "apply", "tut:0"}
+SKIP_CALLBACKS = {"menu", "home", "profile", "apply", "tut:0", "rules:ok"}
 
 
 class HomeButtonMiddleware(BaseRequestMiddleware):

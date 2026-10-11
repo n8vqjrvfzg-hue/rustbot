@@ -7,7 +7,7 @@ import config
 import roles
 import ui
 from database import db
-from keyboards.extras import tut_start_kb
+from keyboards.extras import rules_ok_kb, tut_start_kb
 from keyboards.main import guest_menu, main_menu
 
 router = Router()
@@ -25,6 +25,8 @@ async def home_payload(uid: int):
         return ui.menu_text(user), main_menu(roles.level(user["role"]))
     if status == "onboarding":
         return ui.tutorial_intro_text(), tut_start_kb()
+    if status == "rules":
+        return ui.rules_screen(await db.get_rules_custom(), first_time=True), rules_ok_kb()
     if status == "pending":
         return ui.pending_text(), None
     return ui.guest_text(), guest_menu()

@@ -91,8 +91,30 @@ def settings_kb(v: dict) -> Kb:
         [Btn(text=f"📝 Приём анкет: {on(v['apps_open'])}", callback_data="adm:set:apps_open")],
         [Btn(text=f"⚠️ Автобан (3 варна): {on(v['autoban'])}", callback_data="adm:set:autoban")],
         [Btn(text=f"⭐ Оценок в сутки: {v['rep_per_day']}", callback_data="adm:set:rep_per_day")],
+        [Btn(text="📜 Правила сообщества", callback_data="adm:rules")],
         [Btn(text="⬅️ Назад", callback_data="admin")],
     ])
+
+
+# ---------- правила ----------
+
+def rules_ok_kb() -> Kb:
+    return Kb(inline_keyboard=[[Btn(text="✅ Прочитал(а) и согласен(на)", callback_data="rules:ok")]])
+
+
+def rules_view_kb() -> Kb:
+    return Kb(inline_keyboard=[[Btn(text="⬅️ Назад", callback_data="menu")]])
+
+
+def rules_admin_kb() -> Kb:
+    return Kb(inline_keyboard=[
+        [Btn(text="✏️ Изменить текст", callback_data="adm:rules:edit")],
+        [Btn(text="⬅️ К настройкам", callback_data="adm:settings")],
+    ])
+
+
+def rules_cancel_kb() -> Kb:
+    return Kb(inline_keyboard=[[Btn(text="❌ Отмена", callback_data="adm:rules")]])
 
 
 # ---------- прайм-тайм ----------

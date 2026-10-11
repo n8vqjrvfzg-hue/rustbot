@@ -34,7 +34,7 @@ def main_menu(level: int) -> Kb:
             Btn(text="🔎 Поиск команды", callback_data="team"),
             Btn(text="📚 Факты о Rust", callback_data="facts"),
         ],
-        [channel_button()],
+        [Btn(text="📜 Правила", callback_data="rules"), channel_button()],
     ]
     if level >= 1:
         rows.append([Btn(text="🛠 Админ-меню", callback_data="admin")])

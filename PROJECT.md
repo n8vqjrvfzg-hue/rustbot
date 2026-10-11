@@ -27,7 +27,7 @@ Telegram-бот закрытого сообщества по игре Rust. Pyth
 | `deploy/`, `DEPLOY.md`, `DEPLOY_BEGET.md` | сервер: systemd, `setup_server.sh` (установка), `botctl` (управление), обновление |
 
 ## Handlers
-`start` (меню, /start), `anketa` (анкета + принятие/отклонение), `tutorial` (обучение), `profile` (профиль, ник, игровые роли, прайм-тайм, уведомления), `steam` (привязка Steam, часы, инвентарь, DLC), `composition` (состав), `reputation` (+rep/-rep, топ, жалобы), `support` (обращения к админам), `events` (календарь и запись), `polls` (голосования), `team` (поиск команды), `facts` (факты по часовому рангу: novice <400 ч, mid 400–1999, pro ≥2000; админы добавляют свои), `emergency` (экстренный сбор), `admin` (админ-меню, тех. работы), `admin_manage` (участники, роли, правки), `stats` (статистика админов), `settings` (настройки), `channel` (личная ссылка на закрытый канал), `ops` (/status, /backup, /export).
+`start` (меню, /start), `anketa` (анкета + принятие/отклонение), `tutorial` (обучение), `rules` (правила сообщества: просмотр, подтверждение после обучения, редактирование админами), `profile` (профиль, ник, игровые роли, прайм-тайм, уведомления), `steam` (привязка Steam, часы, инвентарь, DLC), `composition` (состав), `reputation` (+rep/-rep, топ, жалобы), `support` (обращения к админам), `events` (календарь и запись), `polls` (голосования), `team` (поиск команды), `facts` (факты по часовому рангу: novice <400 ч, mid 400–1999, pro ≥2000; админы добавляют свои), `emergency` (экстренный сбор), `admin` (админ-меню, тех. работы), `admin_manage` (участники, роли, правки), `stats` (статистика админов), `settings` (настройки), `channel` (личная ссылка на закрытый канал), `ops` (/status, /backup, /export).
 
 ## Роли и доступ
 member 0 · moderator 1 · admin 2 · deputy 3 · chief_admin 4 · owner 5.
@@ -35,14 +35,14 @@ member 0 · moderator 1 · admin 2 · deputy 3 · chief_admin 4 · owner 5.
 Действовать можно только над ролями ниже своей.
 
 ## Статусы пользователя
-`new` → `pending` (анкета на рассмотрении) → `onboarding` (анкета принята, идёт обучение) → `accepted` (полноценный участник). Также `rejected`, `banned`, `blacklisted`. Владелец принимается автоматически.
+`new` → `pending` (анкета на рассмотрении) → `onboarding` (анкета принята, идёт обучение) → `rules` (обучение пройдено, нужно прочитать и принять правила) → `accepted` (полноценный участник). Также `rejected`, `banned`, `blacklisted`. Владелец принимается автоматически.
 
 ## Таблицы БД
 users, applications, settings, facts_custom, admin_actions (журнал действий админов для статистики), rep_votes, complaints, tickets, ticket_msgs, polls, poll_votes, events, event_rsvp, team_requests, team_responses, emergencies, emergency_acks, steam_dlc, user_dlc.
 Миграции — автоматически в `db.init()` (`USER_MIGRATIONS`, `APP_MIGRATIONS`).
 
 ## Префиксы callback_data
-`menu` (назад, правит сообщение) `home` (из уведомлений, присылает меню новым сообщением) `admin` `profile` `notif:` `grole:` `prime`/`ptp:`/`pt:` `steam:` `dlc:` `rep:` `cmp:` `support`/`support:reply:` `tk:close:` `team:` `facts:` `polls`/`pl:` `events`/`ev:` `em:` `tut:`/`tutq:`/`tuta:` `app:` `channel` и админские `adm:*` (members, roles, u, ask, do, edit, ef, role, setrole, find, list, hv, polls, pl:*, events, ev:*, em, stats/stp/stu, settings/set, maint).
+`menu` (назад, правит сообщение) `home` (из уведомлений, присылает меню новым сообщением) `admin` `profile` `notif:` `grole:` `prime`/`ptp:`/`pt:` `steam:` `dlc:` `rep:` `cmp:` `support`/`support:reply:` `tk:close:` `team:` `facts:` `polls`/`pl:` `events`/`ev:` `em:` `tut:`/`tutq:`/`tuta:` `rules`/`rules:ok` `app:` `channel` и админские `adm:*` (members, roles, u, ask, do, edit, ef, role, setrole, find, list, hv, polls, pl:*, events, ev:*, em, stats/stp/stu, settings/set, rules, rules:edit, maint).
 
 ## Правила разработки
 - Тексты — только в `ui.py`, кнопки — в `keyboards/`, логика — в `handlers/`, SQL — только в `database/db.py`.
@@ -52,7 +52,7 @@ users, applications, settings, facts_custom, admin_actions (журнал дей�
 - Новый раздел = новый файл в `handlers/` + `include_router` в `main.py` + кнопка в `keyboards/main.py`.
 
 ## Настройки в БД (`settings`)
-`maintenance`, `apps_open`, `autoban`, `rep_per_day`.
+`maintenance`, `apps_open`, `autoban`, `rep_per_day`, `rules_text` (текст правил в HTML; пусто = стандартный из `ui.DEFAULT_RULES`).
 
 ## Надёжность данных
 SQLite в режиме WAL с `synchronous=FULL`, коммит после каждой записи, корректное закрытие в `db.close()`.
@@ -65,4 +65,4 @@ SQLite в режиме WAL с `synchronous=FULL`, коммит после каж
 - Кнопки в сообщениях старше 48 часов Telegram отдаёт боту как недоступные — бот просит открыть меню через /start.
 
 ## История этапов
-1 анкеты, профиль, состав, тех. работы · 2 управление участниками и ролями · 3 репутация, жалобы, обращения · 4 голосования, мероприятия, календарь · 5 поиск команды, факты, экстренный сбор, статистика, настройки · 6 Steam (часы, инвентарь, DLC), прайм-тайм, обучение, ранги, МСК · 7 закрытый канал, защита от сбоев, бэкапы, деплой · 8 факты по рангам, кнопка «Главное меню» в уведомлениях, копии базы в Telegram.
+1 анкеты, профиль, состав, тех. работы · 2 управление участниками и ролями · 3 репутация, жалобы, обращения · 4 голосования, мероприятия, календарь · 5 поиск команды, факты, экстренный сбор, статистика, настройки · 6 Steam (часы, инвентарь, DLC), прайм-тайм, обучение, ранги, МСК · 7 закрытый канал, защита от сбоев, бэкапы, деплой · 8 факты по рангам, кнопка «Главное меню» в уведомлениях, копии базы в Telegram · 11 правила сообщества (кнопка в меню, шаг после обучения, редактирование в Настройках).

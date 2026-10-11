@@ -15,7 +15,7 @@ import tasks
 from database import db
 from handlers import (
     admin, admin_manage, anketa, channel, composition, emergency, events, facts, ops, polls,
-    profile, reputation, settings, start, stats, steam, support, team, tutorial,
+    profile, reputation, rules, settings, start, stats, steam, support, team, tutorial,
 )
 from middlewares.access import AccessMiddleware
 from middlewares.home import HomeButtonMiddleware
@@ -79,7 +79,7 @@ async def main():
 
     # start первым: /start должен сбрасывать любое состояние
     for module in (
-        start, ops, anketa, tutorial, profile, composition, admin, admin_manage, reputation,
+        start, ops, anketa, tutorial, rules, profile, composition, admin, admin_manage, reputation,
         support, polls, events, team, facts, emergency, stats, settings, steam, channel,
     ):
         dp.include_router(module.router)

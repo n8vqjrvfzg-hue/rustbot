@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS users (
     age              INTEGER,
     hours            INTEGER DEFAULT 0,
     role             TEXT DEFAULT 'member',
-    status           TEXT DEFAULT 'new',   -- new | pending | accepted | rejected | banned
+    status           TEXT DEFAULT 'new',   -- new | pending | onboarding | rules | accepted | rejected | banned
     reputation       INTEGER DEFAULT 0,
     warns            INTEGER DEFAULT 0,
     notify_events    INTEGER DEFAULT 1,
@@ -192,6 +192,7 @@ USER_MIGRATIONS = {
     "inv_unique": "INTEGER",
     "inv_marketable": "INTEGER",
     "inv_updated": "TEXT",
+    "rules_accepted_at": "TEXT",
 }
 
 APP_MIGRATIONS = {"prime_time": "TEXT"}
@@ -287,6 +288,16 @@ async def set_user_status(tg_id: int, status: str) -> None:
     await _db.commit()
 
 
+async def accept_rules(tg_id: int) -> bool:
+    """Участник прочитал правила: статус rules -> accepted, время фиксируется. False, если статус другой."""
+    cur = await _db.execute(
+        "UPDATE users SET status = 'accepted', rules_accepted_at = ? WHERE tg_id = ? AND status = 'rules'",
+        (timeutil.now_str(), tg_id),
+    )
+    await _db.commit()
+    return cur.rowcount > 0
+
+
 async def update_nick(tg_id: int, nick: str) -> None:
     await _db.execute("UPDATE users SET nick = ? WHERE tg_id = ?", (nick, tg_id))
     await _db.commit()
@@ -371,6 +382,15 @@ async def set_setting(key: str, value: str) -> None:
         (key, value),
     )
     await _db.commit()
+
+
+async def get_rules_custom() -> str:
+    """Текст правил, заданный админами (HTML). Пустая строка — используется стандартный."""
+    return await get_setting("rules_text", "")
+
+
+async def set_rules_custom(text: str) -> None:
+    await set_setting("rules_text", text)
 
 
 # ---------- управление участниками ----------

@@ -36,6 +36,8 @@ async def apply_start(cb: CallbackQuery, state: FSMContext):
         return await cb.answer("Анкета уже на рассмотрении.", show_alert=True)
     if user["status"] == "onboarding":
         return await cb.answer("Анкета принята. Пройди обучение: нажми /start.", show_alert=True)
+    if user["status"] == "rules":
+        return await cb.answer("Анкета принята. Осталось прочитать правила: нажми /start.", show_alert=True)
     if user["status"] == "accepted" and not owner_needs:
         return await cb.answer("Анкета уже принята.", show_alert=True)
     if not owner_needs and await db.get_setting("apps_open", "1") != "1":

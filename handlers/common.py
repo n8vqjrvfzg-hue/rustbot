@@ -9,6 +9,9 @@ async def get_member(cb: CallbackQuery):
     if user and user["status"] == "onboarding":
         await cb.answer("Сначала пройди обучение: нажми /start.", show_alert=True)
         return None
+    if user and user["status"] == "rules":
+        await cb.answer("Сначала прочитай правила: нажми /start.", show_alert=True)
+        return None
     if not user or user["status"] != "accepted":
         await cb.answer("Сначала нужно пройти анкету.", show_alert=True)
         return None
