@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Короткие команды управления ботом (удобно набирать с телефона).
+case "$1" in
+  status)  systemctl status rustbot --no-pager ;;
+  logs)    journalctl -u rustbot -n "${2:-60}" --no-pager ;;
+  follow)  journalctl -u rustbot -f ;;
+  start)   systemctl start rustbot && sleep 2 && systemctl is-active rustbot ;;
+  stop)    systemctl stop rustbot && echo "бот остановлен" ;;
+  restart) systemctl restart rustbot && sleep 3 && systemctl is-active rustbot ;;
+  update)
+    zip="${2:?Укажи путь к архиву, например: botctl update /tmp/rustbot_stage10.zip}"
+    [ -f "$zip" ] || { echo "Файл $zip не найден"; exit 1; }
+    cd /opt && unzip -o "$zip"
+    chown -R bot:bot /opt/rustbot
+    sudo -u bot /opt/rustbot/venv/bin/pip install -r /opt/rustbot/requirements.txt -q
+    systemctl restart rustbot && sleep 3 && systemctl is-active rustbot
+    journalctl -u rustbot -n 15 --no-pager
+    ;;
+  *) echo "Команды: status | logs [N] | follow | start | stop | restart | update <архив.zip>" ;;
+esac
