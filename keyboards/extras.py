@@ -245,3 +245,8 @@ def fact_view_kb(fid: int) -> Kb:
         [Btn(text="🗑 Удалить", callback_data=f"adm:fd:{fid}")],
         [Btn(text="⬅️ К списку", callback_data="adm:fl")],
     ])
+
+def cancel_kb() -> Kb:
+    """Кнопка отмены (вернуться в главное меню)."""
+    return Kb(inline_keyboard=[[Btn(text="❌ Отмена", callback_data="home")]])
+

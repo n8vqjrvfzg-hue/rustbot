@@ -1,4 +1,5 @@
 """Рассылка сообщений всем участникам (только для владельцев)."""
+import asyncio
 from aiogram import F, Router
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -7,7 +8,6 @@ from aiogram.types import CallbackQuery, Message
 import ui
 from database import db
 from keyboards.extras import cancel_kb
-from utils import safe_edit, start_broadcast
 
 router = Router()
 
@@ -25,20 +25,22 @@ async def broadcast_start(cb: CallbackQuery, state: FSMContext):
     
     await state.set_state(BroadcastState.text)
     text = (
-        f"{ui.header('📣', 'РАССЫЛКА ВСЕМ')}\\n\\n"
-        "Отправь текст сообщения, которое получат все участники.\\n"
-        "Можно использовать форматирование Telegram (жирный, курсив, ссылки).\\n\\n"
+        f"{ui.header('📣', 'РАССЫЛКА ВСЕМ')}\n\n"
+        "Отправь текст сообщения, которое получат все участники.\n"
+        "Можно использовать форматирование Telegram (жирный, курсив, ссылки).\n\n"
         "<i>Для отмены нажми «Отмена» или /start</i>"
     )
-    await safe_edit(cb.message, text, cancel_kb())
+    await cb.message.edit_text(text, reply_markup=cancel_kb())
     await cb.answer()
 
 
 @router.message(BroadcastState.text, F.text)
 async def broadcast_send(message: Message, state: FSMContext):
     """Владелец отправляет рассылку."""
-    if await db.get_level(message.from_user.id) < 5:
-        return await state.clear()
+    level = await db.get_level(message.from_user.id)
+    if level < 5:
+        await state.clear()
+        return
     
     text = message.html_text.strip()
     if len(text) < 10:
@@ -49,8 +51,8 @@ async def broadcast_send(message: Message, state: FSMContext):
     users = await db._all("SELECT tg_id FROM users WHERE status = 'accepted'")
     
     await message.answer(
-        f"📣 Рассылка создана\\n"
-        f"Адресатов: {len(users)}\\n\\n"
+        f"📣 Рассылка создана\n"
+        f"Адресатов: {len(users)}\n\n"
         f"Отправляю... (может занять пару минут)"
     )
     
@@ -65,8 +67,11 @@ async def broadcast_send(message: Message, state: FSMContext):
                 ok += 1
             except Exception:
                 pass
+            await asyncio.sleep(0.02)
         await db.update_broadcast_stats(bid, ok, len(users))
+        await message.bot.send_message(
+            message.from_user.id,
+            f"✅ Рассылка завершена\nДоставлено: {ok}/{len(users)}"
+        )
     
-    # Запуск в фоне через start_broadcast
-    import asyncio
     asyncio.create_task(send_all())

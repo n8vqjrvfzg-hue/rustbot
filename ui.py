@@ -1339,7 +1339,13 @@ def fact_new_prompt(tier: str) -> str:
 def fact_view_text(row) -> str:
     icon, label = TIER_LABELS[row["tier"]]
     title = f"ФАКТ #{row['id']}"
-    return f"{header('📚', title)}\n\n{icon} <b>{label}</b>\n\n{esc(row['text'])}"    sub_status = "✅ подписан" if is_subscribed else "❌ не подписан"
+    return f"{header('📚', title)}\n\n{icon} <b>{label}</b>\n\n{esc(row['text'])}"
+
+
+# ---------- подписка на канал и достижения в профиле ----------
+
+def profile_text(u, rank: int | None = None, dlc=None, achievements=None, is_subscribed: bool = False) -> str:
+    """Профиль участника с рангом репутации, DLC и достижениями."""
+    sub_status = "✅ подписан" if is_subscribed else "❌ не подписан"
     ach_title = f"\n🏆 {achievements['title']}" if achievements and achievements.get("title") else ""
     
-           

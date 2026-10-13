@@ -14,8 +14,8 @@ import config
 import tasks
 from database import db
 from handlers import (
-    admin, admin_manage, anketa, channel, composition, emergency, events, facts, ops, polls,
-    profile, reputation, rules, settings, start, stats, steam, support, team, tutorial,
+    admin, admin_manage, anketa, broadcasts, channel, composition, emergency, events, facts, ops, polls,
+    profile, reputation, rules, settings, start, stats, steam, support, team, tutorial, user_messaging,
 )
 from middlewares.access import AccessMiddleware
 from middlewares.home import HomeButtonMiddleware
