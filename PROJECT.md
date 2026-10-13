@@ -38,7 +38,7 @@ member 0 · moderator 1 · admin 2 · deputy 3 · chief_admin 4 · owner 5.
 `new` → `pending` (анкета на рассмотрении) → `onboarding` (анкета принята, идёт обучение) → `rules` (обучение пройдено, нужно прочитать и принять правила) → `accepted` (полноценный участник). Также `rejected`, `banned`, `blacklisted`. Владелец принимается автоматически.
 
 ## Таблицы БД
-users, applications, settings, facts_custom, admin_actions (журнал действий админов для статистики), rep_votes, complaints, tickets, ticket_msgs, polls, poll_votes, events, event_rsvp, team_requests, team_responses, emergencies, emergency_acks, steam_dlc, user_dlc.
+users, applications, settings, facts_custom, admin_actions (журнал действий админов для статистики), rep_votes, complaints, tickets, ticket_msgs, polls, poll_votes, events, event_rsvp, team_requests, team_responses, emergencies, emergency_acks, steam_dlc, user_dlc, achievements (звания и значки участников), user_messages (сообщения от админов участникам), broadcasts (рассылки).
 Миграции — автоматически в `db.init()` (`USER_MIGRATIONS`, `APP_MIGRATIONS`).
 
 ## Префиксы callback_data

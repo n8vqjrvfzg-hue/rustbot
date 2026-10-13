@@ -139,6 +139,11 @@ async def report_send(message: Message, state: FSMContext, bot: Bot):
     t = await db.get_user(data.get("tid", 0))
     if not me or me["status"] != "accepted" or not t:
         return await state.clear()
+    
+    # Задача #8: на владельца нельзя писать жалобы
+    if t["role"] == "owner":
+        await state.clear()
+        return await message.answer("❌ На владельцев сообщества нельзя писать жалобы.", reply_markup=kb.back_to_rep())
 
     text = message.text.strip()[:500]
     if not text:

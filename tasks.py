@@ -48,6 +48,44 @@ async def steam_loop() -> None:
         await asyncio.sleep(6 * 3600)
 
 
+async def subscription_check_loop(bot) -> None:
+    """Проверка подписки на канал каждые 30 минут. Напоминание, если не подписан."""
+    if not config.CHANNEL:
+        return  # если канал не настроен, пропускаем
+    await asyncio.sleep(120)
+    while True:
+        try:
+            # Напоминания каждые 30 минут
+            for row in await db.users_need_sub_reminder():
+                uid = row["tg_id"]
+                try:
+                    await bot.send_message(
+                        uid,
+                        "📢 Чтобы получать информацию о командах и событиях, подпишись на наш канал!\n"
+                        f"Ссылка: https://t.me/{config.CHANNEL.lstrip('@') if isinstance(config.CHANNEL, str) else '...'}",
+                    )
+                    await db.update_channel_reminder(uid)
+                except Exception:
+                    pass
+                await asyncio.sleep(0.05)
+            
+            # Полная проверка подписки раз в день
+            for row in await db.users_need_sub_check():
+                uid = row["tg_id"]
+                try:
+                    member = await bot.get_chat_member(config.CHANNEL, uid)
+                    is_member = member.status in ("member", "administrator", "creator")
+                    await db.update_channel_sub(uid, is_member)
+                except Exception:
+                    await db.update_channel_sub(uid, False)
+                await asyncio.sleep(0.1)
+        except Exception as ex:
+            log.error("Ошибка проверки подписки: %s", ex)
+        await asyncio.sleep(1800)  # 30 минут
+
+
+
+
 async def backup_loop(bot) -> None:
     """Копия базы + выгрузка таблиц в CSV: сохраняются на сервере и присылаются в Telegram (вне сервера)."""
     await asyncio.sleep(300)

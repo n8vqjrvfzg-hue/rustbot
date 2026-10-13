@@ -5,6 +5,7 @@ from aiogram.types import CallbackQuery
 import ui
 from database import db
 from keyboards.admin import admin_menu
+from handlers import broadcasts, user_messaging
 
 router = Router()
 
@@ -54,3 +55,7 @@ async def toggle_maintenance(cb: CallbackQuery):
     await db.set_setting("maintenance", new)
     await _render(cb, level)
     await cb.answer("Режим тех. работ включён" if new == "1" else "Режим тех. работ выключен")
+
+
+router.include_router(broadcasts.router)
+router.include_router(user_messaging.router)

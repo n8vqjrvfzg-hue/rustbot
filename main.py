@@ -80,12 +80,13 @@ async def main():
     # start первым: /start должен сбрасывать любое состояние
     for module in (
         start, ops, anketa, tutorial, rules, profile, composition, admin, admin_manage, reputation,
-        support, polls, events, team, facts, emergency, stats, settings, steam, channel,
+        support, polls, events, team, facts, emergency, stats, settings, steam, channel, broadcasts, user_messaging,
     ):
         dp.include_router(module.router)
 
     background = [
         asyncio.create_task(tasks.reminder_loop(bot)),
+        asyncio.create_task(tasks.subscription_check_loop(bot)),
         asyncio.create_task(tasks.backup_loop(bot)),
     ]
     if config.STEAM_API_KEY:

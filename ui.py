@@ -86,7 +86,7 @@ def pending_text() -> str:
     )
 
 
-def profile_text(u, rank: int | None = None, dlc=None) -> str:
+def profile_text(u, rank: int | None = None, dlc=None, achievements=None, is_subscribed: bool = False) -> str:
     tg = f"@{html.escape(u['username'])}" if u["username"] else "скрыт"
     age = f"{u['age']} {years(u['age'])}" if u["age"] else "возраст не указан"
     warns = u["warns"]
@@ -829,10 +829,13 @@ def team_menu_text() -> str:
 
 
 def team_new_prompt() -> str:
+    import config
+    channel_info = f"Заявка будет опубликована в {config.CHANNEL.lstrip('@') if isinstance(config.CHANNEL, str) else 'канале'}." if config.TEAM_CHANNEL_ID else ""
     return (
         f"{header('🔎', 'НОВАЯ ЗАЯВКА')}\n\n"
         "Опиши, кого ищешь: цель (рейд, фарм, постройка), сколько человек, "
-        "когда играть, какие роли нужны (до 400 символов).\n"
+        "когда играть, какие роли нужны (до 400 символов).\n\n"
+        f"{channel_info}\n"
         "<i>Для отмены нажми «Отмена» или /start</i>"
     )
 
@@ -1315,6 +1318,14 @@ def fact_tier_prompt() -> str:
     return f"{header('➕', 'НОВЫЙ ФАКТ')}\n\nДля какого уровня игроков этот факт? 👇"
 
 
+
+def broadcast_text() -> str:
+    return f"{header('📣', 'РАССЫЛКА')}\n\nОтправить сообщение всем участникам сообщества."
+
+
+def user_message_text() -> str:
+    return f"{header('✉️', 'НАПИСАТЬ УЧАСТНИКУ')}\n\nНайти участника и отправить ему личное сообщение."
+
 def fact_new_prompt(tier: str) -> str:
     icon, label = TIER_LABELS[tier]
     return (
@@ -1328,4 +1339,7 @@ def fact_new_prompt(tier: str) -> str:
 def fact_view_text(row) -> str:
     icon, label = TIER_LABELS[row["tier"]]
     title = f"ФАКТ #{row['id']}"
-    return f"{header('📚', title)}\n\n{icon} <b>{label}</b>\n\n{esc(row['text'])}"
+    return f"{header('📚', title)}\n\n{icon} <b>{label}</b>\n\n{esc(row['text'])}"    sub_status = "✅ подписан" if is_subscribed else "❌ не подписан"
+    ach_title = f"\n🏆 {achievements['title']}" if achievements and achievements.get("title") else ""
+    
+           

@@ -25,7 +25,9 @@ class ChangePrime(StatesGroup):
 async def _profile_text(user) -> str:
     rank = await db.rep_rank(user["tg_id"])
     dlc = (len(await db.user_dlc_ids(user["tg_id"])), len(await db.get_dlc_list()))
-    return ui.profile_text(user, rank, dlc)
+    achievements = await db.get_achievements(user["tg_id"])
+    is_subscribed = bool(user.get("channel_sub_status"))
+    return ui.profile_text(user, rank, dlc, achievements, is_subscribed)
 
 
 @router.callback_query(F.data == "profile")

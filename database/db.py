@@ -167,6 +167,36 @@ CREATE TABLE IF NOT EXISTS ticket_msgs (
 );
 CREATE TABLE IF NOT EXISTS admin_actions (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
+
+CREATE TABLE IF NOT EXISTS achievements (
+    id                INTEGER PRIMARY KEY,
+    tg_id             INTEGER NOT NULL UNIQUE,
+    title             TEXT DEFAULT '',      -- "Новичок", "Рейдер", "Командный игрок" и т.д.
+    badges            TEXT DEFAULT '',      -- JSON: ["badge_name", ...]
+    created_at        TEXT,
+    FOREIGN KEY(tg_id) REFERENCES users(tg_id) ON DELETE CASCADE
+)
+
+CREATE TABLE IF NOT EXISTS user_messages (
+    id                INTEGER PRIMARY KEY,
+    from_user         INTEGER NOT NULL,     -- кто написал (админ)
+    to_user           INTEGER NOT NULL,     -- кому (участник)
+    text              TEXT,
+    created_at        TEXT,
+    replied_at        TEXT,                 -- когда ответил участник
+    FOREIGN KEY(from_user) REFERENCES users(tg_id),
+    FOREIGN KEY(to_user) REFERENCES users(tg_id) ON DELETE CASCADE
+)
+
+CREATE TABLE IF NOT EXISTS broadcasts (
+    id                INTEGER PRIMARY KEY,
+    by_user           INTEGER NOT NULL,     -- кто отправил
+    text              TEXT,
+    sent_at           TEXT,
+    delivered         INTEGER DEFAULT 0,    -- сколько доставлено
+    total             INTEGER DEFAULT 0,    -- всего участников
+    FOREIGN KEY(by_user) REFERENCES users(tg_id)
+)
     admin_id   INTEGER NOT NULL,
     action     TEXT NOT NULL,
     target_id  INTEGER,
@@ -193,6 +223,9 @@ USER_MIGRATIONS = {
     "inv_marketable": "INTEGER",
     "inv_updated": "TEXT",
     "rules_accepted_at": "TEXT",
+    "channel_sub_status": "INTEGER DEFAULT 0",  # 0 = не подписан, 1 = подписан
+    "channel_sub_checked_at": "TEXT",  # когда последний раз проверили подписку
+    "channel_reminder_at": "TEXT",  # когда последний раз напомнили о подписке
 }
 
 APP_MIGRATIONS = {"prime_time": "TEXT"}
@@ -275,12 +308,24 @@ async def get_level(tg_id: int) -> int:
 
 
 async def ensure_user(tg_id: int, username: str | None) -> None:
+    """Создать/обновить пользователя. Username может приходить из message.from_user.username (может быть None)."""
     await _db.execute(
         "INSERT INTO users (tg_id, username) VALUES (?, ?) "
-        "ON CONFLICT(tg_id) DO UPDATE SET username = excluded.username",
+        "ON CONFLICT(tg_id) DO UPDATE SET username = excluded.username WHERE excluded.username IS NOT NULL",
         (tg_id, username),
     )
     await _db.commit()
+
+
+async def ensure_user_from_message(tg_id: int, message) -> None:
+    """Обновить username из объекта Message (use after every message handler)."""
+    username = message.from_user.username if message and message.from_user else None
+    if username:  # только если username есть, не перезаписываем None
+        await _db.execute(
+            "UPDATE users SET username = ? WHERE tg_id = ?",
+            (username, tg_id),
+        )
+        await _db.commit()
 
 
 async def set_user_status(tg_id: int, status: str) -> None:
@@ -1086,6 +1131,141 @@ async def get_custom_fact(fid: int):
 async def delete_custom_fact(fid: int) -> None:
     await _db.execute("DELETE FROM facts_custom WHERE id = ?", (fid,))
     await _db.commit()
+
+
+# ---------- подписка на канал (задача 6/7) ----------
+
+async def update_channel_sub(tg_id: int, is_subscribed: bool) -> None:
+    """Обновить статус подписки на канал и время проверки."""
+    await _db.execute(
+        "UPDATE users SET channel_sub_status = ?, channel_sub_checked_at = ? WHERE tg_id = ?",
+        (1 if is_subscribed else 0, timeutil.now_str(), tg_id),
+    )
+    await _db.commit()
+
+
+async def update_channel_reminder(tg_id: int) -> None:
+    """Зафиксировать время последнего напоминания о подписке."""
+    await _db.execute(
+        "UPDATE users SET channel_reminder_at = ? WHERE tg_id = ?",
+        (timeutil.now_str(), tg_id),
+    )
+    await _db.commit()
+
+
+async def users_need_sub_reminder() -> list:
+    """Участники, которых давно не напоминали (или вообще не напоминали) о подписке на канал."""
+    cutoff = timeutil.in_minutes(-30)  # не напоминали за последние 30 минут
+    return await _all(
+        "SELECT tg_id FROM users "
+        "WHERE channel_sub_status = 0 AND status = 'accepted' "
+        "AND (channel_reminder_at IS NULL OR channel_reminder_at < ?) "
+        "LIMIT 50",
+        (cutoff,),
+    )
+
+
+async def users_need_sub_check() -> list:
+    """Участники, у которых не проверяли подписку за последний день."""
+    cutoff = timeutil.in_days(-1)
+    return await _all(
+        "SELECT tg_id FROM users WHERE status = 'accepted' "
+        "AND (channel_sub_checked_at IS NULL OR channel_sub_checked_at < ?) "
+        "LIMIT 100",
+        (cutoff,),
+    )
+
+
+# ---------- достижения (задача 4) ----------
+
+async def get_achievements(tg_id: int) -> dict | None:
+    return await _one("SELECT * FROM achievements WHERE tg_id = ?", (tg_id,))
+
+
+async def set_achievement_title(tg_id: int, title: str) -> None:
+    """Установить звание участника (кроме звания по часам)."""
+    await _db.execute(
+        "INSERT INTO achievements (tg_id, title) VALUES (?, ?) "
+        "ON CONFLICT(tg_id) DO UPDATE SET title = excluded.title",
+        (tg_id, title),
+    )
+    await _db.commit()
+
+
+async def add_badge(tg_id: int, badge_name: str) -> None:
+    """Добавить значок в достижения участника. badge_name: 'rep_master', 'event_member', 'team_player' и т.д."""
+    import json
+    ach = await get_achievements(tg_id)
+    badges = json.loads(ach["badges"] or "[]") if ach else []
+    if badge_name not in badges:
+        badges.append(badge_name)
+    badges_json = json.dumps(badges)
+    await _db.execute(
+        "INSERT INTO achievements (tg_id, badges) VALUES (?, ?) "
+        "ON CONFLICT(tg_id) DO UPDATE SET badges = excluded.badges",
+        (tg_id, badges_json),
+    )
+    await _db.commit()
+
+
+# ---------- сообщения пользователей (задача 3) ----------
+
+async def send_user_message(from_user: int, to_user: int, text: str) -> int:
+    """Админ отправляет сообщение участнику. Возвращает id сообщения."""
+    cur = await _db.execute(
+        "INSERT INTO user_messages (from_user, to_user, text, created_at) VALUES (?, ?, ?, ?)",
+        (from_user, to_user, text, timeutil.now_str()),
+    )
+    await _db.commit()
+    return cur.lastrowid
+
+
+async def get_user_message(msg_id: int) -> dict | None:
+    return await _one("SELECT * FROM user_messages WHERE id = ?", (msg_id,))
+
+
+async def mark_message_replied(msg_id: int) -> None:
+    """Отметить сообщение как прочитанное/ответ получен."""
+    await _db.execute(
+        "UPDATE user_messages SET replied_at = ? WHERE id = ?",
+        (timeutil.now_str(), msg_id),
+    )
+    await _db.commit()
+
+
+async def get_unreplied_messages(to_user: int) -> list:
+    """Непрочитанные сообщения для участника."""
+    return await _all(
+        "SELECT * FROM user_messages WHERE to_user = ? AND replied_at IS NULL ORDER BY created_at DESC",
+        (to_user,),
+    )
+
+
+# ---------- рассылки (задача 2) ----------
+
+async def create_broadcast(by_user: int, text: str) -> int:
+    """Создать новую рассылку. Возвращает id."""
+    cur = await _db.execute(
+        "INSERT INTO broadcasts (by_user, text, sent_at) VALUES (?, ?, ?)",
+        (by_user, text, timeutil.now_str()),
+    )
+    await _db.commit()
+    return cur.lastrowid
+
+
+async def update_broadcast_stats(bid: int, delivered: int, total: int) -> None:
+    """Обновить статистику рассылки."""
+    await _db.execute(
+        "UPDATE broadcasts SET delivered = ?, total = ? WHERE id = ?",
+        (delivered, total, bid),
+    )
+    await _db.commit()
+
+
+async def get_broadcast(bid: int) -> dict | None:
+    return await _one("SELECT * FROM broadcasts WHERE id = ?", (bid,))
+
+
 
 
 # ---------- надёжность: выгрузка, проверка, закрытие ----------
